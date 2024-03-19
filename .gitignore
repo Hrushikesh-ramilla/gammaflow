@@ -1,0 +1,66 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+.pnpm-store/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Next.js
+apps/web/.next/
+apps/web/out/
+
+# Go
+apps/orchestrator/bin/
+*.exe
+*.test
+
+# Python
+apps/api/.pytest_cache/
+apps/api/__pycache__/
+apps/api/.mypy_cache/
+apps/api/.ruff_cache/
+apps/api/alembic/versions/__pycache__/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Turbo
+.turbo/
+
+# Logs
+*.log
+logs/
+
+# Docker volumes
+postgres-data/
+qdrant-storage/
+
+# Test artifacts
+coverage/
+.coverage
+htmlcov/
+
+# PDF uploads (development)
+uploads/
+tmp/
+
+# Compiled assets
+*.min.js
+*.min.css

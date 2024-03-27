@@ -3,25 +3,201 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-inter: "Inter", sans-serif;
+
+  /* Brand palette */
+  --brand-primary: 99 102 241;       /* indigo-500 */
+  --brand-secondary: 139 92 246;     /* violet-500 */
+  --brand-accent: 236 72 153;        /* pink-500 */
+
+  /* Surface colors */
+  --surface-0: 3 7 18;              /* gray-950 */
+  --surface-1: 17 24 39;            /* gray-900 */
+  --surface-2: 31 41 55;            /* gray-800 */
+  --surface-3: 55 65 81;            /* gray-700 */
+
+  /* Citation highlight */
+  --highlight-citation: 252 211 77;  /* amber-300 */
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter);
+  background: rgb(var(--surface-0));
+  color: white;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* === Custom scrollbar === */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgb(var(--surface-1));
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--surface-3));
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(99 102 241 / 0.7);
+}
+
+/* === Gradient text === */
+.gradient-text {
+  background: linear-gradient(
+    135deg,
+    rgb(99 102 241) 0%,
+    rgb(139 92 246) 50%,
+    rgb(236 72 153) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* === Glass effect === */
+.glass {
+  background: rgb(255 255 255 / 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.glass-strong {
+  background: rgb(255 255 255 / 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgb(255 255 255 / 0.12);
+}
+
+/* === Glow effects === */
+.glow-indigo {
+  box-shadow: 0 0 40px rgb(99 102 241 / 0.3);
+}
+
+.glow-violet {
+  box-shadow: 0 0 40px rgb(139 92 246 / 0.3);
+}
+
+/* === Citation highlight overlay === */
+.citation-highlight {
+  background: rgb(252 211 77 / 0.35);
+  border-radius: 2px;
+  animation: citation-fade 8s ease-out forwards;
+}
+
+@keyframes citation-fade {
+  0% { background: rgb(252 211 77 / 0.45); }
+  70% { background: rgb(252 211 77 / 0.35); }
+  100% { background: transparent; }
+}
+
+/* === Prose for AI responses === */
+.prose-syl {
+  font-size: 0.925rem;
+  line-height: 1.7;
+  color: rgb(209 213 219);  /* gray-300 */
+}
+
+.prose-syl h1,
+.prose-syl h2,
+.prose-syl h3 {
+  color: white;
+  font-weight: 600;
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+}
+
+.prose-syl p {
+  margin-bottom: 0.85em;
+}
+
+.prose-syl strong {
+  color: white;
+  font-weight: 600;
+}
+
+.prose-syl code {
+  background: rgb(31 41 55);
+  border: 1px solid rgb(55 65 81);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.85em;
+  color: rgb(167 139 250);
+}
+
+/* Citation chip inside AI response */
+.citation-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgb(99 102 241 / 0.2);
+  border: 1px solid rgb(99 102 241 / 0.5);
+  color: rgb(165 180 252);
+  border-radius: 9999px;
+  padding: 0px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  margin: 0 2px;
+}
+
+.citation-chip:hover {
+  background: rgb(99 102 241 / 0.4);
+  border-color: rgb(99 102 241 / 0.8);
+  color: white;
+}
+
+/* === Animations === */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
+}
+
+/* === Reactflow custom === */
+.react-flow__edge-path {
+  stroke: rgb(99 102 241);
+  stroke-width: 2;
+}
+
+.react-flow__background {
+  background: rgb(3 7 18);
+}
+
+.react-flow__controls {
+  background: rgb(17 24 39);
+  border: 1px solid rgb(55 65 81);
+  border-radius: 8px;
+}
+
+.react-flow__controls-button {
+  background: transparent;
+  border: none;
+  color: rgb(156 163 175);
+}
+
+.react-flow__controls-button:hover {
+  background: rgb(31 41 55);
+  color: white;
 }

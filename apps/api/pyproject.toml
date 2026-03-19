@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "syl-api"
+version = "1.0.0"
+description = "SYL ML Pipeline — PDF ingestion, RAG, LLM conversation"
+authors = [{ name = "Hrushikesh Ramilla", email = "ramillahrushikesh@gmail.com" }]
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.29.0",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    "sqlalchemy[asyncio]>=2.0.28",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.1",
+    "psycopg2-binary>=2.9.9",
+    "pymupdf>=1.24.0",
+    "pytesseract>=0.3.10",
+    "Pillow>=10.2.0",
+    "opencv-python-headless>=4.9.0",
+    "sentence-transformers>=2.7.0",
+    "qdrant-client[fastembed]>=1.9.0",
+    "anthropic>=0.25.0",
+    "openai>=1.23.0",
+    "redis[asyncio]>=5.0.3",
+    "celery>=5.3.6",
+    "httpx>=0.27.0",
+    "python-multipart>=0.0.9",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-dotenv>=1.0.1",
+    "structlog>=24.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.1.1",
+    "pytest-asyncio>=0.23.6",
+    "pytest-cov>=5.0.0",
+    "httpx>=0.27.0",
+    "ruff>=0.4.0",
+    "mypy>=1.9.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

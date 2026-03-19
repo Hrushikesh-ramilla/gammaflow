@@ -22,9 +22,14 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ── Source Files (placeholder) ───────────────────────────────────────────────
 # add_executable(gammaflow src/main.cpp)
 
-# ── Tests (placeholder) ─────────────────────────────────────────────────────
-# enable_testing()
-# add_subdirectory(tests)
+# ── Tests ────────────────────────────────────────────────────────────────────
+enable_testing()
+
+add_executable(test_structures tests/test_structures.cpp)
+target_include_directories(test_structures PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(test_structures PRIVATE pthread)
+
+add_test(NAME DataStructureTests COMMAND test_structures)
 
 # ── Benchmarks (placeholder) ────────────────────────────────────────────────
 # add_subdirectory(benchmarks)

@@ -1,0 +1,19 @@
+{
+  "name": "syl",
+  "private": true,
+  "scripts": {
+    "dev": "./scripts/dev.sh",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "clean": "turbo clean"
+  },
+  "devDependencies": {
+    "turbo": "^1.13.4"
+  },
+  "packageManager": "pnpm@9.1.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

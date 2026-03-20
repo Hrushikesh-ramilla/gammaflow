@@ -38,6 +38,11 @@ inline constexpr std::uint32_t POOL_NULL = UINT32_MAX;
 //   by different threads will never share a cache line.
 // ─────────────────────────────────────────────────────────────────────────────
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4324) // structure was padded due to alignment specifier
+#endif
+
 template <typename T, std::size_t Capacity>
 class ObjectPool {
     static_assert(Capacity > 0, "ObjectPool capacity must be > 0");
@@ -156,5 +161,9 @@ private:
     /// Head of the lock-free free-list (Treiber stack).
     alignas(64) std::atomic<std::uint32_t> head_{0};
 };
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 } // namespace gammaflow

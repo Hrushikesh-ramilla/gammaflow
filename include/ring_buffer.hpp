@@ -34,6 +34,11 @@ namespace gammaflow {
 //              empty state.
 // ─────────────────────────────────────────────────────────────────────────────
 
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4324) // structure was padded due to alignment specifier
+#endif
+
 template <typename T, std::size_t Capacity>
 class SPSCRingBuffer {
     static_assert(Capacity > 1,
@@ -153,5 +158,9 @@ private:
     /// The underlying fixed-size storage.
     std::array<T, Capacity> buffer_;
 };
+
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 } // namespace gammaflow

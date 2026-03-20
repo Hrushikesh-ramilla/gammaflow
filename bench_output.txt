@@ -15,28 +15,28 @@
   Median (p50)                64 cycles        20 ns  (20 ns)
   p95                         64 cycles        20 ns  (20 ns)
   p99                         64 cycles        20 ns  (20 ns)
-  p99.9                      160 cycles        50 ns  (50 ns)
+  p99.9                      192 cycles        60 ns  (60 ns)
   Min                         32 cycles        10 ns  (10 ns)
-  Max                      31328 cycles      9808 ns  (9.81 ┬╡s)
+  Max                     100832 cycles     31569 ns  (31.57 ┬╡s)
 
   Events evaluated: 1000000
 
 ΓöÇΓöÇ Benchmark 2: End-to-end (Producer ΓåÆ cache-aligned ring ΓåÆ Evaluator) ΓöÇΓöÇ
 
-  Average                   1248 cycles       391 ns  (391 ns)
-  Median (p50)               994 cycles       311 ns  (311 ns)
-  p95                       1828 cycles       572 ns  (572 ns)
-  p99                       5151 cycles      1613 ns  (1.61 ┬╡s)
-  p99.9                    37985 cycles     11893 ns  (11.89 ┬╡s)
-  Min                         33 cycles        10 ns  (10 ns)
-  Max                   18446744073709551490 cycles  5775444991145670656 ns  (5775444991145.67 ms)
+  Average                    426 cycles       133 ns  (133 ns)
+  Median (p50)               293 cycles        92 ns  (92 ns)
+  p95                        421 cycles       132 ns  (132 ns)
+  p99                        453 cycles       142 ns  (142 ns)
+  p99.9                    53125 cycles     16633 ns  (16.63 ┬╡s)
+  Min                        101 cycles        32 ns  (32 ns)
+  Max                     232741 cycles     72868 ns  (72.87 ┬╡s)
 
   Events processed: 990000 (excluding 10000 warmup)
 
 ΓöÇΓöÇ Benchmark 3: Throughput (events/sec) ΓöÇΓöÇ
 
-  Total time:       10.627 ms
-  Throughput:       94099934 events/sec
+  Total time:       9.384 ms
+  Throughput:       106560958 events/sec
 
 ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   Benchmark complete.

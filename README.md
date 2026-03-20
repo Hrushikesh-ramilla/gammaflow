@@ -25,7 +25,7 @@ The metrics below were captured on bare metal AC-power against 1,000,000 randomi
 * **Median (p50)**: `132 ns` (421 cycles)
 * **p95**: `152 ns` (485 cycles)
 * **p99**: `162 ns` (517 cycles)
-* **p99.9**: `11.7 µs` (37,509 cycles)
-* **Minimum**: `92 ns` (293 cycles)
+* **p99.9**: `16.49 µs` (52,677 cycles)
+* **Minimum**: `82 ns` (261 cycles)
 
 *Pipeline averages a sustained throughput in excess of 60.3 Million events/sec.*

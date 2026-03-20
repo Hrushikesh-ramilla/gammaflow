@@ -1,0 +1,13 @@
+﻿MSBuild version 17.12.12+1cce77968 for .NET Framework
+
+  1>Checking Build System
+  Building Custom Rule C:/Users/ramil/OneDrive/Desktop/gammaflow/CMakeLists.txt
+  latency_bench.cpp
+  latency_bench.obj : MSIL .netmodule or module compiled with /GL found; restarting link with /LTCG; add /LTCG to the link command line to improve linker performance
+  Generating code
+  Finished generating code
+  latency_bench.vcxproj -> C:\Users\ramil\OneDrive\Desktop\gammaflow\build\Release\latency_bench.exe
+  Building Custom Rule C:/Users/ramil/OneDrive/Desktop/gammaflow/CMakeLists.txt
+  test_structures.cpp
+  test_structures.vcxproj -> C:\Users\ramil\OneDrive\Desktop\gammaflow\build\Release\test_structures.exe
+  Building Custom Rule C:/Users/ramil/OneDrive/Desktop/gammaflow/CMakeLists.txt

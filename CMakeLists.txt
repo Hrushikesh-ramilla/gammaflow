@@ -12,11 +12,17 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # ── Cross-Platform Compiler Configuration ────────────────────────────────────
 if (MSVC)
-    # MSVC: /W4 = high warning level, /WX = warnings as errors
-    #       /MT = static CRT linkage (no vcredist dependency)
-    #       /EHs-c- = disable C++ exceptions on the hot path
-    #       /O2 = maximize speed, /arch:AVX2 = use AVX2 intrinsics
-    add_compile_options(/W4 /WX /O2 /arch:AVX2 /MT /EHs-c- /DNDEBUG)
+    # MSVC:
+    #   /W4       – High warning level (MSVC equivalent of -Wall -Wextra)
+    #   /WX       – Treat warnings as errors
+    #   /O2       – Maximize speed
+    #   /arch:AVX2 – Enable AVX2 SIMD instructions
+    #   /MT       – Static CRT linkage (no vcredist dependency)
+    #   /EHsc     – Standard C++ exception handling (required by STL headers)
+    #   /wd4324   – Suppress "structure was padded due to alignment specifier"
+    #              (intentional: we use alignas(64) for cache-line isolation)
+    #   /DNDEBUG  – Disable assertions in release
+    add_compile_options(/W4 /WX /O2 /arch:AVX2 /MT /EHsc /wd4324 /DNDEBUG)
 else()
     # GCC / Clang: strict warnings + treat as errors
     add_compile_options(-Wall -Wextra -Werror)
@@ -49,19 +55,18 @@ target_include_directories(latency_bench PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
 if (MSVC)
     # HFT Optimization Flags (MSVC):
-    # /O2: Maximize speed
+    # /O2:       Maximize speed
     # /arch:AVX2: Use AVX2 SIMD instructions
-    # /EHs-c-: Disable exception handling overhead
-    # /GL: Whole-program optimization (MSVC equivalent of -flto)
-    # /DNDEBUG: Disable assertions
-    target_compile_options(latency_bench PRIVATE /O2 /arch:AVX2 /EHs-c- /GL /DNDEBUG)
+    # /GL:       Whole-program optimization (MSVC equivalent of -flto)
+    # /DNDEBUG:  Disable assertions
+    target_compile_options(latency_bench PRIVATE /O2 /arch:AVX2 /GL /DNDEBUG)
 else()
     # HFT Optimization Flags (GCC/Clang):
-    # -O3: Max optimization
-    # -march=native: Use local CPU architecture instructions (AVX2/AVX-512)
-    # -flto: Link-time optimization across files
+    # -O3:             Max optimization
+    # -march=native:   Use local CPU architecture instructions (AVX2/AVX-512)
+    # -flto:           Link-time optimization across files
     # -fno-exceptions: Remove exception handling overhead from the hot path
-    # -DNDEBUG: Disable assertions
+    # -DNDEBUG:        Disable assertions
     target_compile_options(latency_bench PRIVATE -O3 -march=native -flto -fno-exceptions -DNDEBUG)
     target_link_libraries(latency_bench PRIVATE pthread)
 endif()

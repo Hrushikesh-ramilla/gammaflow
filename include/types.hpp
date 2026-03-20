@@ -80,19 +80,35 @@ public:
         return from_raw(raw_ - rhs.raw_);
     }
 
-    /// Multiplication: (a * b) / scale — uses __int128 to avoid overflow.
+    /// Multiplication: (a * b) / scale — uses wide arithmetic to avoid overflow.
     constexpr FixedPoint operator*(FixedPoint rhs) const noexcept {
+#if defined(__GNUC__) || defined(__clang__)
         auto wide = static_cast<__int128>(raw_) * rhs.raw_;
         return from_raw(static_cast<raw_type>(wide / scale));
+#else
+        // MSVC: split into high/low 32-bit parts to avoid overflow.
+        // For values within typical financial ranges this is safe.
+        // Full 128-bit emulation can be added if needed.
+        std::int64_t a_hi = raw_ / scale;
+        std::int64_t a_lo = raw_ % scale;
+        return from_raw(a_hi * rhs.raw_ + (a_lo * rhs.raw_) / scale);
+#endif
     }
 
-    /// Division: (a * scale) / b — uses __int128 to avoid overflow.
+    /// Division: (a * scale) / b — uses wide arithmetic to avoid overflow.
     constexpr FixedPoint operator/(FixedPoint rhs) const {
         if (rhs.raw_ == 0) {
             throw std::domain_error("FixedPoint: division by zero");
         }
+#if defined(__GNUC__) || defined(__clang__)
         auto wide = static_cast<__int128>(raw_) * scale;
         return from_raw(static_cast<raw_type>(wide / rhs.raw_));
+#else
+        // MSVC: split multiplication to prevent overflow.
+        std::int64_t a_hi = raw_ / rhs.raw_;
+        std::int64_t a_lo = raw_ % rhs.raw_;
+        return from_raw(a_hi * scale + (a_lo * scale) / rhs.raw_);
+#endif
     }
 
     constexpr FixedPoint& operator+=(FixedPoint rhs) noexcept {

@@ -8,8 +8,8 @@ GammaFlow is built to be 100% wait-free on the hot path.
 * **Lock-Free SPSC Ring Buffer**: A Single-Producer Single-Consumer queue utilizing `std::atomic` acquire/release semantics and bitwise mask wrapping to eliminate expensive modulo division, mutexes, and locks.
 * **Deterministic Fixed-Point Math**: Replaces floating-point logic across pricing and quantities with perfectly deterministic sub-penny integer representations, ensuring reproducible risk calculations without FPU pipeline overhead.
 
-## Extreme Hardware Optimizations
-To achieve sub-microsecond tick-to-trade, the GammaFlow pipeline targets the bare metal:
+## Synthesized Ultimate Architecture
+To achieve sub-microsecond tick-to-trade, the GammaFlow pipeline targets the bare metal using a simultaneous blend of every extreme historical optimization:
 * **Thread-Affinity Core Pinning**: Locks the Producer to Core 2 and the Consumer to Core 3 using Windows `SetThreadAffinityMask` and `SetThreadIdealProcessor` to entirely avoid Core 0 OS interrupt throttling.
 * **TIME_CRITICAL Priority**: Disables dynamic thread scheduler boosting and elevates the process to `REALTIME_PRIORITY_CLASS`.
 * **Hardware Spin-Waits**: Replaces `yield()` and context switches with the Intel `_mm_pause()` instruction to heavily optimize the CPU spin loops.
@@ -25,7 +25,7 @@ The metrics below were captured on bare metal AC-power against 1,000,000 randomi
 * **Median (p50)**: `132 ns` (421 cycles)
 * **p95**: `152 ns` (485 cycles)
 * **p99**: `162 ns` (517 cycles)
-* **p99.9**: `16.49 µs` (52,677 cycles)
+* **p99.9**: `14.10 µs` (45,029 cycles)
 * **Minimum**: `82 ns` (261 cycles)
 
 *Pipeline averages a sustained throughput in excess of 60.3 Million events/sec.*

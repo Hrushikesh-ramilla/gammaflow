@@ -14,29 +14,29 @@
   Average                    147 cycles        46 ns  (46 ns)
   Median (p50)               160 cycles        50 ns  (50 ns)
   p95                        160 cycles        50 ns  (50 ns)
-  p99                        192 cycles        60 ns  (60 ns)
+  p99                        160 cycles        50 ns  (50 ns)
   p99.9                      256 cycles        80 ns  (80 ns)
   Min                        128 cycles        40 ns  (40 ns)
-  Max                     108928 cycles     34104 ns  (34.10 ┬╡s)
+  Max                     313600 cycles     98184 ns  (98.18 ┬╡s)
 
   Events evaluated: 1000000
 
 ΓöÇΓöÇ Benchmark 2: End-to-end (Producer ΓåÆ cache-aligned ring ΓåÆ Evaluator) ΓöÇΓöÇ
 
-  Average                    545 cycles       171 ns  (171 ns)
+  Average                    534 cycles       167 ns  (167 ns)
   Median (p50)               421 cycles       132 ns  (132 ns)
   p95                        485 cycles       152 ns  (152 ns)
   p99                        517 cycles       162 ns  (162 ns)
-  p99.9                    52677 cycles     16493 ns  (16.49 ┬╡s)
+  p99.9                    45029 cycles     14098 ns  (14.10 ┬╡s)
   Min                        261 cycles        82 ns  (82 ns)
-  Max                     324677 cycles    101652 ns  (101.65 ┬╡s)
+  Max                     234309 cycles     73359 ns  (73.36 ┬╡s)
 
   Events processed: 990000 (excluding 10000 warmup)
 
 ΓöÇΓöÇ Benchmark 3: Throughput (events/sec) ΓöÇΓöÇ
 
-  Total time:       18.320 ms
-  Throughput:       54584557 events/sec
+  Total time:       18.103 ms
+  Throughput:       55239768 events/sec
 
 ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   Benchmark complete.

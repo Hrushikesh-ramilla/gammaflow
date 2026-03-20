@@ -95,82 +95,40 @@ public:
     [[nodiscard]] RiskResult evaluate(const RiskEvent& event) const noexcept {
 
         // ── 1. Price component ──────────────────────────────────────────────
-
-        std::int32_t price_score = 0;
-
-        if (event.price < penny_threshold) {
-            // Sub-dollar instruments are inherently volatile.
-            price_score = 400;
-        } else if (event.price < low_price) {
-            // Low-priced equities — elevated risk.
-            price_score = 300;
-        } else if (event.price < mid_price) {
-            // Mid-range — moderate risk.
-            price_score = 150;
-        } else if (event.price < high_price) {
-            // Blue-chip territory — lower risk.
-            price_score = 50;
-        } else {
-            // Ultra-high-priced instruments (e.g. BRK.A) — minimal base risk.
-            price_score = 20;
-        }
+        std::int32_t price_score = 
+              (event.price < penny_threshold) * 400
+            + (event.price >= penny_threshold && event.price < low_price) * 300
+            + (event.price >= low_price && event.price < mid_price) * 150
+            + (event.price >= mid_price && event.price < high_price) * 50
+            + (event.price >= high_price) * 20;
 
         // ── 2. Quantity component ───────────────────────────────────────────
-
-        std::int32_t qty_score = 0;
-
-        if (event.quantity < tiny_qty) {
-            // Retail-size order — negligible market impact.
-            qty_score = 10;
-        } else if (event.quantity < small_qty) {
-            // Small block — low impact.
-            qty_score = 50;
-        } else if (event.quantity < large_qty) {
-            // Institutional block — moderate impact.
-            qty_score = 200;
-        } else if (event.quantity < huge_qty) {
-            // Large block — significant market impact.
-            qty_score = 350;
-        } else {
-            // Massive order — potential market-moving event.
-            qty_score = 500;
-        }
+        std::int32_t qty_score = 
+              (event.quantity < tiny_qty) * 10
+            + (event.quantity >= tiny_qty && event.quantity < small_qty) * 50
+            + (event.quantity >= small_qty && event.quantity < large_qty) * 200
+            + (event.quantity >= large_qty && event.quantity < huge_qty) * 350
+            + (event.quantity >= huge_qty) * 500;
 
         // ── 3. Cross-factor amplification (fuzzy AND rules) ─────────────────
-
-        std::int32_t penalty = 0;
-
-        // Rule A: penny stock + large quantity → pump-and-dump signal.
-        if (event.price < penny_threshold && event.quantity >= large_qty) {
-            penalty += 200;
-        }
-
-        // Rule B: high-value instrument + huge quantity → whale activity.
-        if (event.price >= high_price && event.quantity >= huge_qty) {
-            penalty += 150;
-        }
-
-        // Rule C: any extremely large order gets a flat penalty.
-        if (event.quantity >= huge_qty) {
-            penalty += 50;
-        }
+        std::int32_t penalty = 
+              (event.price < penny_threshold && event.quantity >= large_qty) * 200
+            + (event.price >= high_price && event.quantity >= huge_qty) * 150
+            + (event.quantity >= huge_qty) * 50;
 
         // ── 4. Combine & clamp ──────────────────────────────────────────────
-
         std::int32_t raw_score = price_score + qty_score + penalty;
-
-        // Clamp to [0, 1000] using branchless min/max via ternary.
-        std::int32_t score = raw_score < 0    ? 0
-                           : raw_score > 1000 ? 1000
-                           :                    raw_score;
+        
+        // Clamp to [0, 1000] using branchless arithmetic
+        std::int32_t score = (raw_score > 1000) * 1000 + (raw_score <= 1000) * raw_score;
 
         // ── 5. Derive tier ──────────────────────────────────────────────────
-
-        RiskTier tier;
-        if (score >= 750)      tier = RiskTier::CRITICAL;
-        else if (score >= 500) tier = RiskTier::HIGH;
-        else if (score >= 250) tier = RiskTier::MEDIUM;
-        else                   tier = RiskTier::LOW;
+        RiskTier tier = static_cast<RiskTier>(
+              (score >= 750) * static_cast<std::uint8_t>(RiskTier::CRITICAL)
+            + (score >= 500 && score < 750) * static_cast<std::uint8_t>(RiskTier::HIGH)
+            + (score >= 250 && score < 500) * static_cast<std::uint8_t>(RiskTier::MEDIUM)
+            + (score < 250) * static_cast<std::uint8_t>(RiskTier::LOW)
+        );
 
         return RiskResult{event.id, score, tier};
     }

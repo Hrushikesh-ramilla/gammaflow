@@ -48,12 +48,13 @@ using Nanos     = std::chrono::nanoseconds;
 
 /// Calibrate TSC to nanoseconds logic using 100ms baseline.
 static double get_tsc_to_ns_multiplier() {
+    unsigned int aux;
     auto t0_chrono = Clock::now();
-    std::uint64_t t0_tsc = __rdtsc();
+    std::uint64_t t0_tsc = __rdtscp(&aux);
     
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
-    std::uint64_t t1_tsc = __rdtsc();
+    std::uint64_t t1_tsc = __rdtscp(&aux);
     auto t1_chrono = Clock::now();
     
     std::uint64_t tsc_diff = t1_tsc - t0_tsc;
@@ -147,10 +148,11 @@ static void bench_evaluator_only(double tsc_to_ns) {
         (void)r;
     }
 
+    unsigned int aux;
     for (std::size_t i = 0; i < NUM_EVENTS; ++i) {
-        std::uint64_t t0 = __rdtsc();
+        std::uint64_t t0 = __rdtscp(&aux);
         volatile auto result = evaluator.evaluate(events[i]);
-        std::uint64_t t1 = __rdtsc();
+        std::uint64_t t1 = __rdtscp(&aux);
         (void)result;
 
         latencies.push_back(t1 - t0);
@@ -247,7 +249,8 @@ static void bench_end_to_end(double tsc_to_ns) {
                 (void)result;
 
                 // Measure latency immediately after evaluation is complete.
-                std::uint64_t now_tsc = __rdtsc();
+                unsigned int aux;
+                std::uint64_t now_tsc = __rdtscp(&aux);
 
                 if (count >= WARMUP_EVENTS) {
                     latencies[count] = now_tsc - p_ev.enqueue_tsc;
@@ -286,7 +289,8 @@ static void bench_end_to_end(double tsc_to_ns) {
         p_ev.event = events[i];
 
         // Capture exactly before pushing
-        p_ev.enqueue_tsc = __rdtsc();
+        unsigned int aux;
+        p_ev.enqueue_tsc = __rdtscp(&aux);
 
         while (!ring->try_push(p_ev)) {
             _mm_pause(); // Hardware spin-wait, handling back-pressure

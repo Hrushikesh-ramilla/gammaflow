@@ -199,6 +199,34 @@ static void bench_end_to_end(double tsc_to_ns) {
         events[i] = make_event(i);
     }
 
+#ifdef _WIN32
+    // ── OS Memory Locking ──────────────────────────────────────────────────
+    // Expand working set and pin hot arrays into physical RAM to prevent page faults.
+    SIZE_T min_ws, max_ws;
+    HANDLE hProcess = GetCurrentProcess();
+    if (GetProcessWorkingSetSize(hProcess, &min_ws, &max_ws)) {
+        SIZE_T needed = 128 * 1024 * 1024; // 128 MB
+        if (min_ws < needed) {
+            SetProcessWorkingSetSize(hProcess, needed, needed * 2);
+        }
+    }
+    VirtualLock(ring.get(), sizeof(*ring));
+    VirtualLock(latencies.data(), latencies.capacity() * sizeof(std::uint64_t));
+    VirtualLock(events.data(), events.capacity() * sizeof(gammaflow::RiskEvent));
+
+    // ── TLB & Cache Pre-Warming ─────────────────────────────────────────────
+    // Walk the entire ring buffer once to force the OS to map all virtual pages
+    // to physical pages, loading the TLB and preventing first-touch penalties.
+    PaddedEvent dummy_ev{};
+    for (std::size_t i = 0; i < ring->max_size(); ++i) {
+        ring->try_push(dummy_ev);
+    }
+    for (std::size_t i = 0; i < ring->max_size(); ++i) {
+        auto val = ring->try_pop();
+        (void)val;
+    }
+#endif
+
     // ── Consumer thread ─────────────────────────────────────────────────
     std::thread consumer([&] {
 #ifdef _WIN32

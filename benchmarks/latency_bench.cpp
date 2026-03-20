@@ -3,14 +3,19 @@
 // High-resolution end-to-end latency benchmark.
 //
 // Pushes 1,000,000 RiskEvents through the SPSC ring buffer → RiskEvaluator
-// pipeline and measures per-event latency using std::chrono nanosecond
-// timestamps.  Reports average, median, p95, p99, and p99.9 latencies.
+// pipeline and measures per-event latency using __rdtsc() CPU cycles.
 // ─────────────────────────────────────────────────────────────────────────────
 
 #include "ring_buffer.hpp"
 #include "evaluator.hpp"
 #include "models.hpp"
 #include "types.hpp"
+
+#ifdef _MSC_VER
+#include <intrin.h>
+#else
+#include <x86intrin.h>
+#endif
 
 #include <algorithm>
 #include <array>
@@ -21,6 +26,7 @@
 #include <cstring>
 #include <iomanip>
 #include <iostream>
+#include <memory>
 #include <thread>
 #include <vector>
 
@@ -28,7 +34,7 @@
 
 static constexpr std::size_t NUM_EVENTS      = 1'000'000;
 static constexpr std::size_t RING_CAPACITY   = 65536;   // Must be power of two.
-static constexpr std::size_t WARMUP_EVENTS   = 10'000;  // Discard first N for JIT/cache warm-up.
+static constexpr std::size_t WARMUP_EVENTS   = 10'000;  // Discard first N for JIT warm-up.
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -36,16 +42,41 @@ using Clock     = std::chrono::high_resolution_clock;
 using TimePoint = Clock::time_point;
 using Nanos     = std::chrono::nanoseconds;
 
-/// Build a synthetic RiskEvent with varying fields to exercise different
-/// evaluator code paths and prevent the optimizer from constant-folding.
+/// Calibrate TSC to nanoseconds logic using 100ms baseline.
+static double get_tsc_to_ns_multiplier() {
+    auto t0_chrono = Clock::now();
+    std::uint64_t t0_tsc = __rdtsc();
+    
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
+    std::uint64_t t1_tsc = __rdtsc();
+    auto t1_chrono = Clock::now();
+    
+    std::uint64_t tsc_diff = t1_tsc - t0_tsc;
+    std::uint64_t ns_diff = std::chrono::duration_cast<Nanos>(t1_chrono - t0_chrono).count();
+    
+    return static_cast<double>(ns_diff) / static_cast<double>(tsc_diff);
+}
+
+/// A perfectly padded structure to ensure exactly one event per cache line.
+/// Eliminates false sharing between producer enqueue and consumer dequeue.
+struct alignas(64) PaddedEvent {
+    gammaflow::RiskEvent event;
+    std::uint64_t enqueue_tsc;
+};
+
+// Check MSVC C4324 suppression works inside the ring buffer, but this struct
+// itself is naturally 64-byte aligned. RiskEvent = 40 bytes + 8 bytes TSC = 48 bytes.
+// alignas(64) forces it to 64 bytes total.
+static_assert(sizeof(PaddedEvent) == 64, "PaddedEvent must exactly fill one cache line");
+
+
+/// Build a synthetic RiskEvent with varying fields to exercise evaluator code paths.
 static gammaflow::RiskEvent make_event(std::uint64_t seq) {
     gammaflow::RiskEvent ev{};
-    ev.id           = seq;
-    ev.timestamp_ns = static_cast<std::int64_t>(
-        std::chrono::duration_cast<Nanos>(
-            Clock::now().time_since_epoch()).count());
+    ev.id = seq;
+    ev.timestamp_ns = 0; // Not used in this benchmark anymore.
 
-    // Rotate through a set of instruments.
     static constexpr std::array<const char*, 4> symbols = {
         "AAPL", "TSLA", "GOOG", "AMZN"
     };
@@ -53,8 +84,6 @@ static gammaflow::RiskEvent make_event(std::uint64_t seq) {
     std::memset(ev.instrument.data(), 0, ev.instrument.size());
     std::memcpy(ev.instrument.data(), sym, std::strlen(sym));
 
-    // Vary price and quantity to hit different evaluator branches.
-    // Price oscillates: 0.50, 5.00, 50.00, 500.00, 5000.00
     static constexpr std::array<std::int64_t, 5> prices = {
          50000000LL,       //   0.50  (penny stock)
         500000000LL,       //   5.00  (low price)
@@ -64,7 +93,6 @@ static gammaflow::RiskEvent make_event(std::uint64_t seq) {
     };
     ev.price = gammaflow::Price::from_raw(prices[seq % prices.size()]);
 
-    // Quantity oscillates: 5, 50, 5000, 50000, 500000
     static constexpr std::array<std::int64_t, 5> quantities = {
            50000LL,   //       5
           500000LL,   //      50
@@ -77,101 +105,91 @@ static gammaflow::RiskEvent make_event(std::uint64_t seq) {
     return ev;
 }
 
-/// Print a formatted latency line.
-static void print_stat(const char* label, std::int64_t ns) {
+/// Print formatted latency statistics (cycles & converted ns).
+static void print_stat(const char* label, std::uint64_t cycles, double tsc_to_ns) {
+    double ns = cycles * tsc_to_ns;
     std::cout << "  " << std::left << std::setw(22) << label
-              << std::right << std::setw(10) << ns << " ns";
+              << std::right << std::setw(8) << cycles << " cycles  "
+              << std::right << std::setw(8) << std::fixed << std::setprecision(0) << ns << " ns";
+              
     if (ns < 1'000) {
-        std::cout << "  (" << ns << " ns)";
+        std::cout << "  (" << std::fixed << std::setprecision(0) << ns << " ns)";
     } else if (ns < 1'000'000) {
-        std::cout << "  (" << std::fixed << std::setprecision(2)
-                  << (ns / 1'000.0) << " µs)";
+        std::cout << "  (" << std::fixed << std::setprecision(2) << (ns / 1'000.0) << " µs)";
     } else {
-        std::cout << "  (" << std::fixed << std::setprecision(2)
-                  << (ns / 1'000'000.0) << " ms)";
+        std::cout << "  (" << std::fixed << std::setprecision(2) << (ns / 1'000'000.0) << " ms)";
     }
     std::cout << "\n";
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Benchmark 1: Evaluator-only (single-threaded, no ring buffer)
-//
-// Measures the raw cost of RiskEvaluator::evaluate() in isolation, free of
-// any inter-thread synchronization overhead.
 // ═════════════════════════════════════════════════════════════════════════════
 
-static void bench_evaluator_only() {
-    std::cout << "── Benchmark 1: Evaluator-only (single-threaded) ──\n\n";
+static void bench_evaluator_only(double tsc_to_ns) {
+    std::cout << "── Benchmark 1: Evaluator-only (single-threaded, RDTSC) ──\n\n";
 
     gammaflow::RiskEvaluator evaluator;
-    std::vector<std::int64_t> latencies;
+    std::vector<std::uint64_t> latencies;
     latencies.reserve(NUM_EVENTS);
 
-    // Pre-generate events to keep allocation out of the timed region.
     std::vector<gammaflow::RiskEvent> events(NUM_EVENTS);
     for (std::size_t i = 0; i < NUM_EVENTS; ++i) {
         events[i] = make_event(i);
     }
 
-    // Warm-up pass (results discarded).
     for (std::size_t i = 0; i < WARMUP_EVENTS && i < NUM_EVENTS; ++i) {
         volatile auto r = evaluator.evaluate(events[i]);
         (void)r;
     }
 
-    // Timed pass.
     for (std::size_t i = 0; i < NUM_EVENTS; ++i) {
-        auto t0 = Clock::now();
+        std::uint64_t t0 = __rdtsc();
         volatile auto result = evaluator.evaluate(events[i]);
-        auto t1 = Clock::now();
+        std::uint64_t t1 = __rdtsc();
         (void)result;
 
-        latencies.push_back(
-            std::chrono::duration_cast<Nanos>(t1 - t0).count());
+        latencies.push_back(t1 - t0);
     }
 
-    // ── Statistics ───────────────────────────────────────────────────────
     std::sort(latencies.begin(), latencies.end());
 
-    std::int64_t sum = 0;
+    std::uint64_t sum = 0;
     for (auto l : latencies) sum += l;
 
-    auto percentile = [&](double p) -> std::int64_t {
+    auto percentile = [&](double p) -> std::uint64_t {
         auto idx = static_cast<std::size_t>(p * latencies.size());
         if (idx >= latencies.size()) idx = latencies.size() - 1;
         return latencies[idx];
     };
 
-    print_stat("Average",     sum / static_cast<std::int64_t>(latencies.size()));
-    print_stat("Median (p50)", percentile(0.50));
-    print_stat("p95",          percentile(0.95));
-    print_stat("p99",          percentile(0.99));
-    print_stat("p99.9",        percentile(0.999));
-    print_stat("Min",          latencies.front());
-    print_stat("Max",          latencies.back());
+    print_stat("Average",      sum / latencies.size(), tsc_to_ns);
+    print_stat("Median (p50)", percentile(0.50), tsc_to_ns);
+    print_stat("p95",          percentile(0.95), tsc_to_ns);
+    print_stat("p99",          percentile(0.99), tsc_to_ns);
+    print_stat("p99.9",        percentile(0.999), tsc_to_ns);
+    print_stat("Min",          latencies.front(), tsc_to_ns);
+    print_stat("Max",          latencies.back(), tsc_to_ns);
 
     std::cout << "\n  Events evaluated: " << NUM_EVENTS << "\n\n";
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Benchmark 2: End-to-end (producer → SPSC ring → evaluator, two threads)
-//
-// Measures the full pipeline latency including ring buffer push/pop and
-// cross-thread synchronization.
 // ═════════════════════════════════════════════════════════════════════════════
 
-static void bench_end_to_end() {
-    std::cout << "── Benchmark 2: End-to-end (producer → ring → evaluator) ──\n\n";
+static void bench_end_to_end(double tsc_to_ns) {
+    std::cout << "── Benchmark 2: End-to-end (Producer → cache-aligned ring → Evaluator) ──\n\n";
 
-    gammaflow::SPSCRingBuffer<const gammaflow::RiskEvent*, RING_CAPACITY> ring;
+    // We pass PaddedEvent BY VALUE. At 64 bytes perfectly aligned, each enqueue
+    // writes exactly 1 cache line, completely isolating adjacent events avoiding false sharing.
+    // Heap-allocate to prevent stack overflow (64 bytes * 65536 = 4MB > 1MB Windows default stack).
+    auto ring = std::make_unique<gammaflow::SPSCRingBuffer<PaddedEvent, RING_CAPACITY>>();
     gammaflow::RiskEvaluator evaluator;
 
-    // Shared latency storage: producer writes send_ts into the event's
-    // timestamp_ns field; consumer reads it back to compute delta.
-    std::vector<std::int64_t> latencies(NUM_EVENTS, 0);
+    std::vector<std::uint64_t> latencies(NUM_EVENTS, 0);
     std::atomic<bool> consumer_done{false};
 
-    // Pre-generate events.
     std::vector<gammaflow::RiskEvent> events(NUM_EVENTS);
     for (std::size_t i = 0; i < NUM_EVENTS; ++i) {
         events[i] = make_event(i);
@@ -181,20 +199,19 @@ static void bench_end_to_end() {
     std::thread consumer([&] {
         std::size_t count = 0;
         while (count < NUM_EVENTS) {
-            auto maybe = ring.try_pop();
+            auto maybe = ring->try_pop();
             if (maybe.has_value()) {
-                const gammaflow::RiskEvent* ev = *maybe;
+                const PaddedEvent& p_ev = *maybe;
 
                 // Evaluate.
-                volatile auto result = evaluator.evaluate(*ev);
+                volatile auto result = evaluator.evaluate(p_ev.event);
                 (void)result;
 
-                // Measure latency: now – send timestamp.
-                auto now_ns = std::chrono::duration_cast<Nanos>(
-                    Clock::now().time_since_epoch()).count();
+                // Measure latency immediately after evaluation is complete.
+                std::uint64_t now_tsc = __rdtsc();
 
                 if (count >= WARMUP_EVENTS) {
-                    latencies[count] = now_ns - ev->timestamp_ns;
+                    latencies[count] = now_tsc - p_ev.enqueue_tsc;
                 }
 
                 ++count;
@@ -208,23 +225,24 @@ static void bench_end_to_end() {
     // ── Producer (this thread) ──────────────────────────────────────────
     auto next_tick = Clock::now();
     for (std::size_t i = 0; i < NUM_EVENTS; ++i) {
-        // Spin-wait to simulate a realistic network line rate (~1M msgs/sec)
-        // This prevents the ring buffer from filling instantly.
+        // Spin-wait 1µs to simulate a realistic network line rate (~1M msgs/sec)
+        // and eliminate burst queueing delay.
         if (i > 0) {
             next_tick += std::chrono::microseconds(1);
             while (Clock::now() < next_tick) {
-                // busy spin to prevent CPU sleep (mimics NIC polling)
+                // busy spin
             }
         } else {
             next_tick = Clock::now();
         }
 
-        // Stamp the send time just before pushing.
-        events[i].timestamp_ns = static_cast<std::int64_t>(
-            std::chrono::duration_cast<Nanos>(
-                Clock::now().time_since_epoch()).count());
+        PaddedEvent p_ev;
+        p_ev.event = events[i];
 
-        while (!ring.try_push(&events[i])) {
+        // Capture exactly before pushing
+        p_ev.enqueue_tsc = __rdtsc();
+
+        while (!ring->try_push(p_ev)) {
             std::this_thread::yield();  // Back-pressure.
         }
     }
@@ -238,22 +256,22 @@ static void bench_end_to_end() {
 
     std::sort(valid_begin, valid_end);
 
-    std::int64_t sum = 0;
+    std::uint64_t sum = 0;
     for (auto it = valid_begin; it != valid_end; ++it) sum += *it;
 
-    auto percentile = [&](double p) -> std::int64_t {
+    auto percentile = [&](double p) -> std::uint64_t {
         auto idx = static_cast<std::size_t>(p * valid_count);
         if (idx >= valid_count) idx = valid_count - 1;
         return *(valid_begin + idx);
     };
 
-    print_stat("Average",      sum / static_cast<std::int64_t>(valid_count));
-    print_stat("Median (p50)", percentile(0.50));
-    print_stat("p95",          percentile(0.95));
-    print_stat("p99",          percentile(0.99));
-    print_stat("p99.9",        percentile(0.999));
-    print_stat("Min",          *valid_begin);
-    print_stat("Max",          *(valid_end - 1));
+    print_stat("Average",      sum / valid_count, tsc_to_ns);
+    print_stat("Median (p50)", percentile(0.50), tsc_to_ns);
+    print_stat("p95",          percentile(0.95), tsc_to_ns);
+    print_stat("p99",          percentile(0.99), tsc_to_ns);
+    print_stat("p99.9",        percentile(0.999), tsc_to_ns);
+    print_stat("Min",          *valid_begin, tsc_to_ns);
+    print_stat("Max",          *(valid_end - 1), tsc_to_ns);
 
     std::cout << "\n  Events processed: " << valid_count << " (excluding " << WARMUP_EVENTS << " warmup)\n\n";
 }
@@ -286,9 +304,7 @@ static void bench_throughput() {
     std::cout << "  Total time:       " << std::fixed << std::setprecision(3)
               << (elapsed_ns / 1e6) << " ms\n";
     std::cout << "  Throughput:       " << std::fixed << std::setprecision(0)
-              << events_per_sec << " events/sec\n";
-    std::cout << "  Avg ns/event:     " << (elapsed_ns / static_cast<std::int64_t>(NUM_EVENTS))
-              << " ns\n\n";
+              << events_per_sec << " events/sec\n\n";
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -308,8 +324,12 @@ int main() {
               << "                                ║\n"
               << "╚══════════════════════════════════════════════════════════╝\n\n";
 
-    bench_evaluator_only();
-    bench_end_to_end();
+    std::cout << "  Calibrating RDTSC clock... ";
+    double tsc_to_ns = get_tsc_to_ns_multiplier();
+    std::cout << "Done! (1 cycle = " << std::fixed << std::setprecision(4) << tsc_to_ns << " ns)\n\n";
+
+    bench_evaluator_only(tsc_to_ns);
+    bench_end_to_end(tsc_to_ns);
     bench_throughput();
 
     std::cout << "══════════════════════════════════════════════════════════\n"

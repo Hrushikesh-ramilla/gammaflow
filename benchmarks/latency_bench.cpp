@@ -192,7 +192,10 @@ static void bench_end_to_end() {
                 // Measure latency: now – send timestamp.
                 auto now_ns = std::chrono::duration_cast<Nanos>(
                     Clock::now().time_since_epoch()).count();
-                latencies[count] = now_ns - ev->timestamp_ns;
+
+                if (count >= WARMUP_EVENTS) {
+                    latencies[count] = now_ns - ev->timestamp_ns;
+                }
 
                 ++count;
             } else {
@@ -203,7 +206,19 @@ static void bench_end_to_end() {
     });
 
     // ── Producer (this thread) ──────────────────────────────────────────
+    auto next_tick = Clock::now();
     for (std::size_t i = 0; i < NUM_EVENTS; ++i) {
+        // Spin-wait to simulate a realistic network line rate (~1M msgs/sec)
+        // This prevents the ring buffer from filling instantly.
+        if (i > 0) {
+            next_tick += std::chrono::microseconds(1);
+            while (Clock::now() < next_tick) {
+                // busy spin to prevent CPU sleep (mimics NIC polling)
+            }
+        } else {
+            next_tick = Clock::now();
+        }
+
         // Stamp the send time just before pushing.
         events[i].timestamp_ns = static_cast<std::int64_t>(
             std::chrono::duration_cast<Nanos>(
@@ -217,26 +232,30 @@ static void bench_end_to_end() {
     consumer.join();
 
     // ── Statistics ───────────────────────────────────────────────────────
-    std::sort(latencies.begin(), latencies.end());
+    auto valid_begin = latencies.begin() + WARMUP_EVENTS;
+    auto valid_end = latencies.end();
+    std::size_t valid_count = NUM_EVENTS - WARMUP_EVENTS;
+
+    std::sort(valid_begin, valid_end);
 
     std::int64_t sum = 0;
-    for (auto l : latencies) sum += l;
+    for (auto it = valid_begin; it != valid_end; ++it) sum += *it;
 
     auto percentile = [&](double p) -> std::int64_t {
-        auto idx = static_cast<std::size_t>(p * latencies.size());
-        if (idx >= latencies.size()) idx = latencies.size() - 1;
-        return latencies[idx];
+        auto idx = static_cast<std::size_t>(p * valid_count);
+        if (idx >= valid_count) idx = valid_count - 1;
+        return *(valid_begin + idx);
     };
 
-    print_stat("Average",      sum / static_cast<std::int64_t>(latencies.size()));
+    print_stat("Average",      sum / static_cast<std::int64_t>(valid_count));
     print_stat("Median (p50)", percentile(0.50));
     print_stat("p95",          percentile(0.95));
     print_stat("p99",          percentile(0.99));
     print_stat("p99.9",        percentile(0.999));
-    print_stat("Min",          latencies.front());
-    print_stat("Max",          latencies.back());
+    print_stat("Min",          *valid_begin);
+    print_stat("Max",          *(valid_end - 1));
 
-    std::cout << "\n  Events processed: " << NUM_EVENTS << "\n\n";
+    std::cout << "\n  Events processed: " << valid_count << " (excluding " << WARMUP_EVENTS << " warmup)\n\n";
 }
 
 // ═════════════════════════════════════════════════════════════════════════════

@@ -36,5 +36,10 @@ add_executable(latency_bench benchmarks/latency_bench.cpp)
 target_include_directories(latency_bench PRIVATE ${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(latency_bench PRIVATE pthread)
 
-# Benchmarks should always be compiled with optimizations for accurate results.
-target_compile_options(latency_bench PRIVATE -O3)
+# HFT Optimization Flags: 
+# -O3: Max optimization
+# -march=native: Use local CPU architecture instructions (AVX2/AVX-512)
+# -flto: Link-time optimization across files
+# -fno-exceptions: Remove exception handling overhead from the hot path
+# -DNDEBUG: Disable assertions
+target_compile_options(latency_bench PRIVATE -O3 -march=native -flto -fno-exceptions -DNDEBUG)

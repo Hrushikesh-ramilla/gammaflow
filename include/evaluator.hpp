@@ -94,7 +94,13 @@ public:
     ///        – High-value instrument + huge quantity → amplified risk.
     [[nodiscard]] RiskResult evaluate(const RiskEvent& event) const noexcept {
 
-        // ── 1. Price component ──────────────────────────────────────────────
+        // ── 0. Structural logic (Predictable Branches) ──────────────────────
+        // The CPU branch predictor easily handles these baseline structural checks.
+        if (event.quantity.raw() <= 0 || event.price.raw() <= 0) {
+            return RiskResult{event.id, 0, RiskTier::LOW};
+        }
+
+        // ── 1. Price component (Branchless) ─────────────────────────────────
         std::int32_t price_score = 
               (event.price < penny_threshold) * 400
             + (event.price >= penny_threshold && event.price < low_price) * 300
@@ -102,7 +108,7 @@ public:
             + (event.price >= mid_price && event.price < high_price) * 50
             + (event.price >= high_price) * 20;
 
-        // ── 2. Quantity component ───────────────────────────────────────────
+        // ── 2. Quantity component (Branchless) ──────────────────────────────
         std::int32_t qty_score = 
               (event.quantity < tiny_qty) * 10
             + (event.quantity >= tiny_qty && event.quantity < small_qty) * 50
@@ -110,25 +116,27 @@ public:
             + (event.quantity >= large_qty && event.quantity < huge_qty) * 350
             + (event.quantity >= huge_qty) * 500;
 
-        // ── 3. Cross-factor amplification (fuzzy AND rules) ─────────────────
+        // ── 3. Cross-factor amplification (Branchless) ──────────────────────
         std::int32_t penalty = 
               (event.price < penny_threshold && event.quantity >= large_qty) * 200
             + (event.price >= high_price && event.quantity >= huge_qty) * 150
             + (event.quantity >= huge_qty) * 50;
 
-        // ── 4. Combine & clamp ──────────────────────────────────────────────
-        std::int32_t raw_score = price_score + qty_score + penalty;
+        // ── 4. Combine & clamp (Predictable Branches) ───────────────────────
+        std::int32_t score = price_score + qty_score + penalty;
         
-        // Clamp to [0, 1000] using branchless arithmetic
-        std::int32_t score = (raw_score > 1000) * 1000 + (raw_score <= 1000) * raw_score;
+        if (score > 1000) {
+            score = 1000;
+        } else if (score < 0) {
+            score = 0;
+        }
 
-        // ── 5. Derive tier ──────────────────────────────────────────────────
-        RiskTier tier = static_cast<RiskTier>(
-              (score >= 750) * static_cast<std::uint8_t>(RiskTier::CRITICAL)
-            + (score >= 500 && score < 750) * static_cast<std::uint8_t>(RiskTier::HIGH)
-            + (score >= 250 && score < 500) * static_cast<std::uint8_t>(RiskTier::MEDIUM)
-            + (score < 250) * static_cast<std::uint8_t>(RiskTier::LOW)
-        );
+        // ── 5. Derive tier (Predictable Branches) ───────────────────────────
+        RiskTier tier;
+        if (score >= 750)      tier = RiskTier::CRITICAL;
+        else if (score >= 500) tier = RiskTier::HIGH;
+        else if (score >= 250) tier = RiskTier::MEDIUM;
+        else                   tier = RiskTier::LOW;
 
         return RiskResult{event.id, score, tier};
     }

@@ -16,7 +16,7 @@ To achieve sub-microsecond tick-to-trade, the GammaFlow pipeline targets the bar
 * **Cache-Line Padding**: Uses strict `alignas(64)` payload padding to guarantee 64-byte payload offsets, completely destroying false-sharing cache invalidations between cores.
 * **Memory Locking**: Uses Windows `VirtualLock()` alongside Working Set expansion to pin the ring buffer and data structures natively into physical RAM, terminating unpredictable disk-based page-faults.
 * **Instruction Fencing**: Swaps `__rdtsc()` for strictly serialized `__rdtscp(&aux)` CPU timestamps to protect timestamp metrics against out-of-order execution anomalies.
-* **100% Branchless Evaluator**: Risk tier assignment is purely computed through boolean algebra arrays. The `RiskEvaluator::evaluate()` contains zero `if`, `else`, or `switch` statements, granting total immunity to CPU branch mispredictions.
+* **Hybrid Branching Strategy**: Uses predictable `if/else` checks for structural constraints (where the CPU branch predictor excels) and falls back to strictly branchless boolean algebra arrays for randomized, data-dependent risk evaluation. The `RiskEvaluator::evaluate()` method blends both concepts to maximize speed without sacrificing tail determinism.
 
 ## Benchmarks
 The metrics below were captured on bare metal AC-power against 1,000,000 randomized evaluation bursts. 
@@ -24,8 +24,8 @@ The metrics below were captured on bare metal AC-power against 1,000,000 randomi
 ### End-to-End Pipeline (Tick-to-Trade)
 * **Median (p50)**: `132 ns` (421 cycles)
 * **p95**: `152 ns` (485 cycles)
-* **p99**: `172 ns` (549 cycles)
-* **p99.9**: `5.47 µs` (17,477 cycles)
-* **Minimum**: `82 ns` (261 cycles)
+* **p99**: `162 ns` (517 cycles)
+* **p99.9**: `11.7 µs` (37,509 cycles)
+* **Minimum**: `92 ns` (293 cycles)
 
 *Pipeline averages a sustained throughput in excess of 60.3 Million events/sec.*

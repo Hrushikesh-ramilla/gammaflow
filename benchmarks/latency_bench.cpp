@@ -230,8 +230,10 @@ static void bench_end_to_end(double tsc_to_ns) {
     // ── Consumer thread ─────────────────────────────────────────────────
     std::thread consumer([&] {
 #ifdef _WIN32
-        SetThreadAffinityMask(GetCurrentThread(), 2); // Core 1
+        SetThreadAffinityMask(GetCurrentThread(), 8); // Core 3
+        SetThreadIdealProcessor(GetCurrentThread(), 3);
         SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+        SetThreadPriorityBoost(GetCurrentThread(), TRUE);
 #endif
 
         std::size_t count = 0;
@@ -261,8 +263,10 @@ static void bench_end_to_end(double tsc_to_ns) {
 
     // ── Producer (this thread) ──────────────────────────────────────────
 #ifdef _WIN32
-    SetThreadAffinityMask(GetCurrentThread(), 1); // Core 0
+    SetThreadAffinityMask(GetCurrentThread(), 4); // Core 2
+    SetThreadIdealProcessor(GetCurrentThread(), 2);
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+    SetThreadPriorityBoost(GetCurrentThread(), TRUE);
 #endif
 
     auto next_tick = Clock::now();
@@ -354,6 +358,10 @@ static void bench_throughput() {
 // ═════════════════════════════════════════════════════════════════════════════
 
 int main() {
+#ifdef _WIN32
+    SetPriorityClass(GetCurrentProcess(), REALTIME_PRIORITY_CLASS);
+#endif
+
     std::cout << "\n"
               << "╔══════════════════════════════════════════════════════════╗\n"
               << "║         GammaFlow — Latency Benchmarking Suite          ║\n"

@@ -19,10 +19,6 @@
 
 ---
 
-<p align="center">
-  <img src="assets/architecture.png" alt="GammaFlow Architecture" width="100%">
-</p>
-
 ---
 
 ## 🔬 Abstract

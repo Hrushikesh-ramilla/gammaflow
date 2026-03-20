@@ -31,5 +31,10 @@ target_link_libraries(test_structures PRIVATE pthread)
 
 add_test(NAME DataStructureTests COMMAND test_structures)
 
-# ── Benchmarks (placeholder) ────────────────────────────────────────────────
-# add_subdirectory(benchmarks)
+# ── Benchmarks ───────────────────────────────────────────────────────────────
+add_executable(latency_bench benchmarks/latency_bench.cpp)
+target_include_directories(latency_bench PRIVATE ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(latency_bench PRIVATE pthread)
+
+# Benchmarks should always be compiled with optimizations for accurate results.
+target_compile_options(latency_bench PRIVATE -O3)

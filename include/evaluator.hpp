@@ -30,13 +30,11 @@ enum class RiskTier : std::uint8_t {
 };
 
 /// Result of a single risk evaluation — tightly packed, trivially copyable.
-#pragma pack(push, 1)
 struct RiskResult {
     std::uint64_t event_id;     // Correlates back to the source RiskEvent.
     std::int32_t  score;        // [0, 1000] — higher ⟹ riskier.
     RiskTier      tier;         // Derived classification.
 };
-#pragma pack(pop)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RiskEvaluator

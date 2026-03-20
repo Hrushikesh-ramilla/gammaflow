@@ -68,11 +68,12 @@ static double get_tsc_to_ns_multiplier() {
 struct alignas(64) PaddedEvent {
     gammaflow::RiskEvent event;
     std::uint64_t enqueue_tsc;
+    char padding[64 - sizeof(gammaflow::RiskEvent) - sizeof(std::uint64_t)];
 };
 
 // Check MSVC C4324 suppression works inside the ring buffer, but this struct
 // itself is naturally 64-byte aligned. RiskEvent = 40 bytes + 8 bytes TSC = 48 bytes.
-// alignas(64) forces it to 64 bytes total.
+// alignas(64) combined with explicit `padding` array forces exactly 64 bytes natively.
 static_assert(sizeof(PaddedEvent) == 64, "PaddedEvent must exactly fill one cache line");
 
 

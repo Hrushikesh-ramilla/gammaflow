@@ -33,8 +33,6 @@ using InstrumentId = std::array<char, 8>;
 //   - Memory-mapped I/O and IPC ring buffers
 // ─────────────────────────────────────────────────────────────────────────────
 
-#pragma pack(push, 1)
-
 struct RiskEvent {
     /// Monotonically increasing event identifier.
     std::uint64_t id;
@@ -53,8 +51,6 @@ struct RiskEvent {
     /// Trade / quote quantity in fixed-point representation (4 decimal places).
     Quantity quantity;
 };
-
-#pragma pack(pop)
 
 // Compile-time layout assertions — fail fast if assumptions break.
 static_assert(sizeof(RiskEvent) ==

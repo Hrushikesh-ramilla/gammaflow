@@ -17,6 +17,10 @@
 #include <x86intrin.h>
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -197,6 +201,11 @@ static void bench_end_to_end(double tsc_to_ns) {
 
     // ── Consumer thread ─────────────────────────────────────────────────
     std::thread consumer([&] {
+#ifdef _WIN32
+        SetThreadAffinityMask(GetCurrentThread(), 2); // Core 1
+        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#endif
+
         std::size_t count = 0;
         while (count < NUM_EVENTS) {
             auto maybe = ring->try_pop();
@@ -216,13 +225,18 @@ static void bench_end_to_end(double tsc_to_ns) {
 
                 ++count;
             } else {
-                std::this_thread::yield();
+                _mm_pause(); // Hardware spin-wait
             }
         }
         consumer_done.store(true, std::memory_order_release);
     });
 
     // ── Producer (this thread) ──────────────────────────────────────────
+#ifdef _WIN32
+    SetThreadAffinityMask(GetCurrentThread(), 1); // Core 0
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+#endif
+
     auto next_tick = Clock::now();
     for (std::size_t i = 0; i < NUM_EVENTS; ++i) {
         // Spin-wait 1µs to simulate a realistic network line rate (~1M msgs/sec)
@@ -230,7 +244,7 @@ static void bench_end_to_end(double tsc_to_ns) {
         if (i > 0) {
             next_tick += std::chrono::microseconds(1);
             while (Clock::now() < next_tick) {
-                // busy spin
+                _mm_pause(); // Hardware spin-wait
             }
         } else {
             next_tick = Clock::now();
@@ -243,7 +257,7 @@ static void bench_end_to_end(double tsc_to_ns) {
         p_ev.enqueue_tsc = __rdtsc();
 
         while (!ring->try_push(p_ev)) {
-            std::this_thread::yield();  // Back-pressure.
+            _mm_pause(); // Hardware spin-wait, handling back-pressure
         }
     }
 

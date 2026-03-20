@@ -7,35 +7,36 @@
 Γòæ  Warm-up:        10000                                Γòæ
 ΓòÜΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓò¥
 
-ΓöÇΓöÇ Benchmark 1: Evaluator-only (single-threaded) ΓöÇΓöÇ
+  Calibrating RDTSC clock... Done! (1 cycle = 0.3131 ns)
 
-  Average                       46 ns  (46 ns)
-  Median (p50)                   0 ns  (0 ns)
-  p95                          100 ns  (100 ns)
-  p99                          100 ns  (100 ns)
-  p99.9                        100 ns  (100 ns)
-  Min                            0 ns  (0 ns)
-  Max                        13400 ns  (13.40 ┬╡s)
+ΓöÇΓöÇ Benchmark 1: Evaluator-only (single-threaded, RDTSC) ΓöÇΓöÇ
+
+  Average                     62 cycles        19 ns  (19 ns)
+  Median (p50)                64 cycles        20 ns  (20 ns)
+  p95                         64 cycles        20 ns  (20 ns)
+  p99                         64 cycles        20 ns  (20 ns)
+  p99.9                      160 cycles        50 ns  (50 ns)
+  Min                         32 cycles        10 ns  (10 ns)
+  Max                      31328 cycles      9808 ns  (9.81 ┬╡s)
 
   Events evaluated: 1000000
 
-ΓöÇΓöÇ Benchmark 2: End-to-end (producer ΓåÆ ring ΓåÆ evaluator) ΓöÇΓöÇ
+ΓöÇΓöÇ Benchmark 2: End-to-end (Producer ΓåÆ cache-aligned ring ΓåÆ Evaluator) ΓöÇΓöÇ
 
-  Average                  5885327 ns  (5.89 ms)
-  Median (p50)             6551000 ns  (6.55 ms)
-  p95                      6683100 ns  (6.68 ms)
-  p99                      6703900 ns  (6.70 ms)
-  p99.9                    6710700 ns  (6.71 ms)
-  Min                      1301600 ns  (1.30 ms)
-  Max                      6712100 ns  (6.71 ms)
+  Average                   1248 cycles       391 ns  (391 ns)
+  Median (p50)               994 cycles       311 ns  (311 ns)
+  p95                       1828 cycles       572 ns  (572 ns)
+  p99                       5151 cycles      1613 ns  (1.61 ┬╡s)
+  p99.9                    37985 cycles     11893 ns  (11.89 ┬╡s)
+  Min                         33 cycles        10 ns  (10 ns)
+  Max                   18446744073709551490 cycles  5775444991145670656 ns  (5775444991145.67 ms)
 
-  Events processed: 1000000
+  Events processed: 990000 (excluding 10000 warmup)
 
 ΓöÇΓöÇ Benchmark 3: Throughput (events/sec) ΓöÇΓöÇ
 
-  Total time:       9.336 ms
-  Throughput:       107113401 events/sec
-  Avg ns/event:     9 ns
+  Total time:       10.627 ms
+  Throughput:       94099934 events/sec
 
 ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ
   Benchmark complete.

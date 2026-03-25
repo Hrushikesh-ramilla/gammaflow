@@ -1,0 +1,35 @@
+"""Pydantic schemas for retrieval endpoints."""
+
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
+
+
+class SearchRequest(BaseModel):
+    query: str = Field(..., min_length=1, description="User question or topic to search for")
+    syllabus_id: str
+    document_ids: Optional[List[str]] = None
+    document_role: Optional[str] = None  # "TEXTBOOK" | "NOTES" | "SYLLABUS"
+    topic_tag: Optional[str] = None  # filter by topic if provided
+    top_k: int = Field(default=10, ge=1, le=50)
+    use_reranking: bool = True
+
+
+class SearchResult(BaseModel):
+    chunk_id: str
+    document_id: str
+    document_role: str
+    page_number: int
+    text: str
+    source_type: str  # "PDF" | "OCR"
+    ocr_confidence: Optional[float] = None
+    char_start: Optional[int] = None
+    char_end: Optional[int] = None
+    score: float
+    rerank_score: Optional[float] = None
+
+
+class RetrievalResponse(BaseModel):
+    query: str
+    results: List[SearchResult]
+    total: int

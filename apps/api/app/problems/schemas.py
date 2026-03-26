@@ -1,0 +1,50 @@
+"""Pydantic schemas for the problems module."""
+
+from datetime import datetime
+from typing import List, Optional
+from enum import Enum
+
+from pydantic import BaseModel, Field
+
+
+class TierEnum(str, Enum):
+    EXAM_LIKELY = "EXAM_LIKELY"      # cosine similarity > 0.85
+    GOOD_PRACTICE = "GOOD_PRACTICE"  # 0.65 – 0.85
+    OPTIONAL = "OPTIONAL"            # < 0.65
+
+
+class ProblemStatusEnum(str, Enum):
+    TODO = "todo"
+    IN_PROGRESS = "in_progress"
+    DONE = "done"
+
+
+class ProblemSchema(BaseModel):
+    id: str
+    document_id: str
+    problem_number: Optional[str] = None
+    problem_text: str
+    page_number: int
+    chapter: Optional[str] = None
+    rank_tier: Optional[TierEnum] = None
+    similarity_score: Optional[float] = None
+
+
+class ProblemWithProgressSchema(ProblemSchema):
+    user_status: ProblemStatusEnum = ProblemStatusEnum.TODO
+
+
+class RankTierRequest(BaseModel):
+    topic_id: str
+    syllabus_id: str
+    tier: Optional[TierEnum] = None  # None = all tiers
+
+
+class ProblemProgressUpdate(BaseModel):
+    status: ProblemStatusEnum
+
+
+class ExtractionRequest(BaseModel):
+    document_id: str
+    syllabus_id: str
+    chapter: Optional[str] = None

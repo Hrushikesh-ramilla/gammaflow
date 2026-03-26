@@ -1,0 +1,71 @@
+"""Pydantic schemas for conversation/chat endpoints."""
+
+from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
+
+
+# ---------------------------------------------------------------------------
+# Request schemas
+# ---------------------------------------------------------------------------
+
+
+class MessageRequest(BaseModel):
+    content: str = Field(..., min_length=1, max_length=4000)
+    topic_id: Optional[str] = None
+    topic_name: Optional[str] = None
+    session_id: Optional[str] = None  # if None, a new session is created
+
+
+class SessionCreateRequest(BaseModel):
+    syllabus_id: str
+    topic_id: Optional[str] = None
+    topic_name: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Response schemas
+# ---------------------------------------------------------------------------
+
+
+class CitationInfo(BaseModel):
+    page_number: int
+    document_name: str
+    source_type: str  # "PDF" | "OCR"
+    char_start: Optional[int] = None
+    char_end: Optional[int] = None
+
+
+class MessageResponse(BaseModel):
+    id: str
+    role: str
+    content: str
+    citations: Optional[List[CitationInfo]] = None
+    provider: Optional[str] = None  # "claude" | "openai" | "fallback"
+    tokens_used: Optional[int] = None
+    created_at: datetime
+
+
+class SessionResponse(BaseModel):
+    id: str
+    syllabus_id: str
+    topic_id: Optional[str] = None
+    topic_name: Optional[str] = None
+    deviation_depth: int = 0
+    message_count: int = 0
+    created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Streaming event schemas (dict-based, not Pydantic, for SSE performance)
+# ---------------------------------------------------------------------------
+
+# SSE event types emitted by the streaming endpoint:
+#
+#   data: {"type": "token", "content": "...", "provider": "claude"}
+#   data: {"type": "citation", "page": 47, "doc": "Textbook", "source": "PDF"}
+#   data: {"type": "provider_switched", "from": "claude", "to": "openai", "reason": "..."}
+#   data: {"type": "deviation", "depth": 1, "topic": "..."}
+#   data: {"type": "complete", "provider": "claude", "tokens_used": 382, "message_id": "..."}
+#   data: {"type": "error", "message": "..."}

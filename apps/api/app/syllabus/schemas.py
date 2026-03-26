@@ -1,0 +1,63 @@
+"""Pydantic schemas for syllabus endpoints."""
+
+from datetime import datetime
+from typing import List, Optional
+
+from pydantic import BaseModel
+
+
+class TopicSchema(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    estimated_depth: Optional[str] = "intermediate"
+    prerequisites: List[str] = []
+    week: Optional[int] = None
+    keywords: List[str] = []
+
+
+class SyllabusCreateRequest(BaseModel):
+    course_name: str
+    document_id: str  # the uploaded SYLLABUS document
+
+
+class SyllabusResponse(BaseModel):
+    id: str
+    course_name: str
+    user_id: str
+    document_id: Optional[str] = None
+    topic_count: int = 0
+    created_at: datetime
+
+
+class GraphNodeData(BaseModel):
+    label: str
+    description: str
+    depth: str
+    status: str = "not_started"
+    prerequisites: List[str] = []
+
+
+class GraphNode(BaseModel):
+    id: str
+    type: str = "topicNode"
+    position: dict  # {"x": float, "y": float}
+    data: GraphNodeData
+
+
+class GraphEdge(BaseModel):
+    id: str
+    source: str
+    target: str
+    type: str = "topicEdge"
+    animated: bool = False
+    style: Optional[dict] = None
+    markerEnd: Optional[dict] = None
+
+
+class GraphResponse(BaseModel):
+    syllabus_id: str
+    course_name: str
+    nodes: List[GraphNode]
+    edges: List[GraphEdge]
+    topic_count: int

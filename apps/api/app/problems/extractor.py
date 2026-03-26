@@ -1,0 +1,137 @@
+"""Problem extractor using Claude Haiku.
+
+Extracts problems (exercises, questions, practice problems) from textbook
+chapters via Claude Haiku for cost efficiency at scale.
+
+Output per problem:
+  - problem_number (e.g. "3.7", "Q4")
+  - problem_text   (full verbatim text)
+  - page_number    (where it appears)
+  - chapter        (chapter name/number)
+"""
+
+import re
+import uuid
+from typing import List, Optional
+
+import anthropic
+import structlog
+
+from app.config import settings
+
+log = structlog.get_logger()
+
+EXTRACTION_PROMPT = """\
+You are analyzing a textbook chapter to extract all practice problems, exercises, and questions.
+
+Chapter content:
+<content>
+{content}
+</content>
+
+Extract ALL problems/exercises/questions you find. For each one return a JSON array:
+[
+  {{
+    "problem_number": "1.1",
+    "problem_text": "full text of the problem exactly as written",
+    "page_number": 47,
+    "chapter": "Chapter 1: Introduction"
+  }},
+  ...
+]
+
+Rules:
+- Include ALL problems: numbered exercises, end-of-chapter questions, practice sets
+- problem_number: use the number as printed (e.g. "3.7", "Q4", "Exercise 2.3")
+- problem_text: copy verbatim, do NOT summarize
+- page_number: the page number shown in the content metadata
+- chapter: the chapter heading
+- If no problems found, return []
+- Return ONLY the JSON array, no explanation
+"""
+
+
+class ProblemExtractor:
+    """Extracts problems from textbook chunks using Claude Haiku."""
+
+    def __init__(self):
+        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+    def extract_from_chunks(
+        self,
+        chunks: List[dict],
+        chapter: Optional[str] = None,
+    ) -> List[dict]:
+        """Extract problems from a list of text chunks.
+
+        Args:
+            chunks: List of chunk dicts with keys: text, page_number, chapter
+            chapter: Optional chapter override for all chunks
+
+        Returns:
+            List of problem dicts with keys: id, problem_number, problem_text,
+            page_number, chapter
+        """
+        if not chunks:
+            return []
+
+        # Build context from chunks (limit to avoid token limits)
+        content_parts = []
+        for chunk in chunks[:20]:  # Max 20 chunks per extraction call
+            page = chunk.get("page_number", "?")
+            chap = chapter or chunk.get("chapter", "Unknown Chapter")
+            content_parts.append(
+                f"[Page {page} | {chap}]\n{chunk.get('text', '')}"
+            )
+
+        content = "\n\n---\n\n".join(content_parts)
+        if len(content) > 12000:
+            content = content[:12000] + "\n...[truncated]"
+
+        try:
+            response = self.client.messages.create(
+                model=settings.CLAUDE_HAIKU_MODEL,
+                max_tokens=4096,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": EXTRACTION_PROMPT.format(content=content),
+                    }
+                ],
+            )
+
+            raw = response.content[0].text.strip()
+            # Strip markdown code fences if present
+            raw = re.sub(r"^```(?:json)?", "", raw).strip()
+            raw = re.sub(r"```$", "", raw).strip()
+
+            import json
+            problems_raw = json.loads(raw)
+
+            problems = []
+            for p in problems_raw:
+                if not isinstance(p, dict):
+                    continue
+                problem_text = str(p.get("problem_text", "")).strip()
+                if not problem_text:
+                    continue
+                problems.append(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "problem_number": str(p.get("problem_number", "")).strip(),
+                        "problem_text": problem_text,
+                        "page_number": int(p.get("page_number", 0)),
+                        "chapter": str(p.get("chapter", chapter or "")).strip(),
+                    }
+                )
+
+            log.info(
+                "extractor.problems_found",
+                count=len(problems),
+                chunk_count=len(chunks),
+            )
+            return problems
+
+        except Exception as exc:
+            log.error("extractor.failed", error=str(exc))
+            return []

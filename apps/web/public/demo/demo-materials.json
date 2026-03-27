@@ -1,0 +1,29 @@
+{
+  "demoSyllabus": {
+    "course_name": "CS402: Quantum Computing Fundamentals",
+    "topic_count": 12,
+    "nodes": [
+      { "id": "t1", "label": "Qubits and Superposition", "status": "COMPLETED" },
+      { "id": "t2", "label": "Quantum Gates", "status": "IN_PROGRESS" },
+      { "id": "t3", "label": "Entanglement", "status": "NOT_STARTED" }
+    ],
+    "edges": [
+      { "source": "t1", "target": "t2" },
+      { "source": "t2", "target": "t3" }
+    ]
+  },
+  "demoDocuments": [
+    {
+      "id": "doc1",
+      "name": "Nielsen_Chuang_Ch1_to_3.pdf",
+      "type": "TEXTBOOK",
+      "pages": 120
+    },
+    {
+      "id": "doc2",
+      "name": "Lecture_Notes_Week_1.pdf",
+      "type": "NOTES",
+      "pages": 15
+    }
+  ]
+}

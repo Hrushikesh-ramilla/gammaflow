@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  web:
+    build: 
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api.syl.internal
+      - NEXT_PUBLIC_WS_URL=ws://orchestrator.syl.internal
+    depends_on:
+      - orchestrator
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - DATABASE_URL=postgresql://syl:sylpass@postgres:5432/syldb
+    depends_on:
+      - qdrant
+      - postgres
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: apps/orchestrator/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://syl:sylpass@postgres:5432/syldb
+      - UPSTREAM_API_URL=http://api:8000
+    depends_on:
+      - api
+      - postgres
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: syl
+      POSTGRES_PASSWORD: sylpass
+      POSTGRES_DB: syldb
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_storage_prod:/qdrant/storage
+
+volumes:
+  pgdata_prod:
+  qdrant_storage_prod:

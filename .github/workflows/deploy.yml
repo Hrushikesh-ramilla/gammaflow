@@ -1,0 +1,33 @@
+name: Deploy Pipeline
+
+on:
+  push:
+    branches: [ "production" ]
+
+jobs:
+  deploy-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Vercel
+        run: |
+          echo "Deploying Next.js to Vercel..."
+          # npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
+
+  deploy-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy FastAPI to Fly.io
+        run: |
+          echo "Deploying Python API..."
+          # flyctl deploy --app syl-api
+
+  deploy-orchestrator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy Go to Fly.io
+        run: |
+          echo "Deploying Go session manager..."
+          # flyctl deploy --app syl-orchestrator
